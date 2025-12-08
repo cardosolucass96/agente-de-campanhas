@@ -5,7 +5,6 @@ from typing import TypedDict, Annotated, Sequence
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, ToolMessage
 from langgraph.graph import StateGraph, END
-from langgraph.prebuilt import ToolNode
 from langgraph.graph.message import add_messages
 import os
 from dotenv import load_dotenv
@@ -385,12 +384,41 @@ def format_for_whatsapp(state: AgentState):
     return {"messages": messages}
 
 
+def call_tools(state: AgentState):
+    """Execute tools based on the agent's tool calls"""
+    messages = state["messages"]
+    last_message = messages[-1]
+    
+    tool_calls = last_message.tool_calls if hasattr(last_message, 'tool_calls') else []
+    tool_messages = []
+    
+    for tool_call in tool_calls:
+        tool_name = tool_call["name"]
+        tool_args = tool_call["args"]
+        tool_id = tool_call["id"]
+        
+        # Find and execute the tool
+        tool = next((t for t in AGENT_TOOLS if t.name == tool_name), None)
+        if tool:
+            try:
+                result = tool.invoke(tool_args)
+                tool_messages.append(
+                    ToolMessage(content=str(result), tool_call_id=tool_id)
+                )
+            except Exception as e:
+                tool_messages.append(
+                    ToolMessage(content=f"Error: {str(e)}", tool_call_id=tool_id)
+                )
+    
+    return {"messages": tool_messages}
+
+
 # Criar o grafo
 workflow = StateGraph(AgentState)
 
 # Adicionar nós
 workflow.add_node("agent", call_model)
-workflow.add_node("tools", ToolNode(AGENT_TOOLS))
+workflow.add_node("tools", call_tools)
 workflow.add_node("format_whatsapp", format_for_whatsapp)
 
 # Definir o ponto de entrada
