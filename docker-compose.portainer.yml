@@ -1,8 +1,10 @@
-version: "3.7"
+version: "3.8"
 
 services:
   agente-campanhas:
     image: ghcr.io/cardosolucass96/agente-de-campanhas:latest
+    container_name: agente-campanhas
+    restart: unless-stopped
     
     networks:
       - CardosoNet
@@ -26,23 +28,12 @@ services:
     volumes:
       - agente_campanhas_data:/app/data
 
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
-      labels:
-        - traefik.enable=true
-        - traefik.http.routers.agente_campanhas.rule=Host(`agente.cardosolucas.com`)
-        - traefik.http.routers.agente_campanhas.entrypoints=websecure
-        - traefik.http.routers.agente_campanhas.tls.certresolver=letsencryptresolver
-        - traefik.http.routers.agente_campanhas.service=agente_campanhas
-        - traefik.http.services.agente_campanhas.loadbalancer.server.port=8000
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.agente_campanhas.rule=Host(`agente.cardosolucas.com`)
+      - traefik.http.routers.agente_campanhas.entrypoints=websecure
+      - traefik.http.routers.agente_campanhas.tls.certresolver=letsencryptresolver
+      - traefik.http.services.agente_campanhas.loadbalancer.server.port=8000
 
 volumes:
   agente_campanhas_data:
@@ -51,4 +42,3 @@ volumes:
 networks:
   CardosoNet:
     external: true
-    name: CardosoNet
