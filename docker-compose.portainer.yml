@@ -3,12 +3,6 @@ version: '3.8'
 services:
   agente-campanhas:
     image: ghcr.io/cardosolucass96/agente-de-campanhas:latest
-    # Para build local, descomente as linhas abaixo e comente a linha image:
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
-    container_name: agente-campanhas
-    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
@@ -38,21 +32,8 @@ services:
       - DATABASE_URL=sqlite:////app/data/agente_campanhas.db
     volumes:
       # Persistir banco de dados
-      - ./data:/app/data
-      # Opcionalmente montar .env para desenvolvimento
-      # - ./.env:/app/.env:ro
-    networks:
-      - agente-network
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health', timeout=5)"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
-networks:
-  agente-network:
-    driver: bridge
+      - agente-data:/app/data
 
 volumes:
   agente-data:
+    driver: local
