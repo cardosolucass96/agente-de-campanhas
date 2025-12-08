@@ -1,0 +1,173 @@
+[
+  {
+    "timestamp": "2025-12-05T19:30:35.138244",
+    "category": "consulta_contas",
+    "question": "Quais contas de anúncio temos disponíveis?",
+    "response": "Teste, temos 6 contas de anúncio disponíveis, todas ativas:\n\n1. Vorp Experts - Saldo: R$ 8,22\n2. Vorp Scale - Saldo: R$ 100,82\n3. Vorp Edu (MasterMind) - Saldo: R$ 80,70\n4. Vorp Branding - Saldo: R$ 0,00\n5. Vorp Edu (Eventos) - Saldo: R$ 386,86\n6. Vorp Tech - Saldo: R$ 0,00\n\nQuer detalhes de alguma conta específica?",
+    "duration_seconds": 4.971063,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:30:42.113070",
+    "category": "consulta_contas",
+    "question": "Me mostre todas as contas",
+    "response": "Teste, aqui estão as 6 contas de anúncio ativas do Grupo Vorp com seus saldos:\n\n1. Vorp Experts - R$ 8,22\n2. Vorp Scale - R$ 100,82\n3. Vorp Edu (MasterMind) - R$ 80,70\n4. Vorp Branding - R$ 0,00\n5. Vorp Edu (Eventos) - R$ 386,86\n6. Vorp Tech - R$ 0,00\n\nQuer que eu detalhe alguma conta específica? 📊",
+    "duration_seconds": 5.098588,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:30:49.214884",
+    "category": "consulta_contas",
+    "question": "Lista as contas de anúncio",
+    "response": "Teste, aqui estão as 6 contas de anúncio do Grupo Vorp:\n\n1. *Vorp Experts* - Saldo: R$ 8,22\n2. *Vorp Scale* - Saldo: R$ 100,82\n3. *Vorp Edu (MasterMind)* - Saldo: R$ 80,70\n4. *Vorp Branding* - Saldo: R$ 0,00\n5. *Vorp Edu (Eventos)* - Saldo: R$ 386,86\n6. *Vorp Tech* - Saldo: R$ 0,00\n\nTodas estão com status *Ativa*. Quer detalhes de alguma? 📊",
+    "duration_seconds": 4.228058,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:30:55.444762",
+    "category": "insights_basicos",
+    "question": "Como estão as campanhas?",
+    "response": "Olá, Teste! Para te passar um resumo das campanhas, preciso saber qual conta de anúncio ou Business Manager você quer que eu consulte. Pode me informar?",
+    "duration_seconds": 0.9562,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:30:58.409550",
+    "category": "insights_basicos",
+    "question": "Qual o desempenho das campanhas nos últimos 7 dias?",
+    "response": "Teste, segue o resumo do desempenho das campanhas nos últimos 7 dias (23/05 a 29/05):\n\n1. Conta Vorp Edu (MasterMind):\n- Investimento: R$ 1.960,07\n- Resultados: 18.375\n- CPR médio: R$ 0,11\n- Impressões: 131.701\n- Cliques: 1.587\n\n2. Conta Vorp Edu (Eventos):\n- Investimento: R$ 513,90\n- Resultados: 30\n- CPR médio: R$ 17,13\n- Impressões: 22.089\n- Cliques: 192\n\nAs outras contas não registraram resultados no período. Quer que eu detalhe alguma campanha específica? 📊",
+    "duration_seconds": 19.827387,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:31:20.241774",
+    "category": "insights_basicos",
+    "question": "Me mostre os resultados das campanhas",
+    "response": "Teste, temos 6 contas de anúncio ativas. Para quais contas você quer ver os resultados das campanhas? Posso buscar os dados de desempenho para você. 📊",
+    "duration_seconds": 6.89668,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:31:29.141581",
+    "category": "insights_especificos",
+    "question": "Quero ver as campanhas com impressões e CTR",
+    "response": "Teste, para qual conta de anúncio você quer ver as campanhas com impressões e CTR? \nAs opções são: \n1. Vorp Experts\n2. Vorp Scale\n3. Vorp Edu (MasterMind)\n4. Vorp Branding\n5. Vorp Edu (Eventos)\n6. Vorp Tech\n\nMe informe o número ou nome da conta.",
+    "duration_seconds": 3.685704,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:31:34.840331",
+    "category": "insights_especificos",
+    "question": "Mostre os conjuntos de anúncios com CPC e alcance",
+    "response": "Teste, para mostrar os conjuntos de anúncios com CPC e alcance, preciso saber em qual destas contas você quer a consulta:\n\n1. Vorp Experts\n2. Vorp Scale\n3. Vorp Edu (MasterMind)\n4. Vorp Branding\n5. Vorp Edu (Eventos)\n6. Vorp Tech\n\nPode me informar o número da conta?",
+    "duration_seconds": 3.833701,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:31:40.689117",
+    "category": "insights_especificos",
+    "question": "Me dê os anúncios individuais com todas as métricas",
+    "response": "Teste, para te passar os anúncios individuais com todas as métricas, preciso que me informe de qual conta de anúncio você quer os dados:\n\n1. Vorp Experts\n2. Vorp Scale\n3. Vorp Edu (MasterMind)\n4. Vorp Branding\n5. Vorp Edu (Eventos)\n6. Vorp Tech\n\nQual?",
+    "duration_seconds": 3.738649,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:31:46.439262",
+    "category": "analise_periodo",
+    "question": "Como foram as campanhas em novembro?",
+    "response": "Teste, para te passar os dados das campanhas em novembro, preciso saber de qual conta de anúncio do Facebook você quer as informações. Pode me informar a conta de anúncio ou o Business Manager?",
+    "duration_seconds": 1.452814,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:31:49.902929",
+    "category": "analise_periodo",
+    "question": "Qual foi o desempenho na última semana?",
+    "response": "Por favor, informe a conta de anúncio do Facebook que deseja consultar o desempenho da última semana para que eu possa buscar os dados corretos.",
+    "duration_seconds": 0.826064,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:31:52.737763",
+    "category": "analise_periodo",
+    "question": "Mostre os resultados dos últimos 30 dias",
+    "response": "Para te ajudar, preciso saber de qual conta de anúncio do Facebook você quer os resultados dos últimos 30 dias. Pode me informar o ID da conta ou o nome?",
+    "duration_seconds": 1.014533,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:31:55.769714",
+    "category": "conversacao_contextual",
+    "question": "Oi, tudo bem?",
+    "response": "Oi, Teste! Tudo bem, e com você? Como posso ajudar hoje? 🙂",
+    "duration_seconds": 1.013247,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:31:58.787593",
+    "category": "conversacao_contextual",
+    "question": "Quais contas temos?",
+    "response": "Teste, temos 6 contas de anúncio ativas:\n\n1. Vorp Experts - Saldo R$ 8,22\n2. Vorp Scale - Saldo R$ 100,82\n3. Vorp Edu (MasterMind) - Saldo R$ 80,70\n4. Vorp Branding - Saldo R$ 0,00\n5. Vorp Edu (Eventos) - Saldo R$ 386,86\n6. Vorp Tech - Saldo R$ 0,00\n\nQuer detalhes de alguma conta específica?",
+    "duration_seconds": 4.140751,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:32:04.934534",
+    "category": "conversacao_contextual",
+    "question": "E qual está com melhor saldo?",
+    "response": "Teste, a conta com melhor saldo é a *Vorp Edu (Eventos)* com R$ 386,86 💰. Posso ajudar com mais alguma informação?",
+    "duration_seconds": 2.695688,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:32:09.633929",
+    "category": "conversacao_contextual",
+    "question": "Pode me mostrar as campanhas dessa conta?",
+    "response": "Por favor, envie o ID da conta de anúncio do Facebook para que eu possa buscar as campanhas para você.",
+    "duration_seconds": 0.675976,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:32:12.318817",
+    "category": "perguntas_complexas",
+    "question": "Qual conta está gastando mais e qual o CPR médio?",
+    "response": "Teste, a conta que está gastando mais é a *Vorp Scale* com R$ 6.010,68 e CPR médio de R$ 47,33.\n\nA conta com menor CPR médio é a *Vorp Edu (MasterMind)* com CPR de R$ 0,02 e gasto de R$ 403,85.\n\nQuer que eu envie um resumo via WhatsApp? 📊",
+    "duration_seconds": 7.812304,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:32:22.133551",
+    "category": "perguntas_complexas",
+    "question": "Compare o desempenho das campanhas entre esta semana e a semana passada",
+    "response": "Teste, para comparar o desempenho preciso do ID da conta de anúncio do Facebook que deseja analisar. Você pode me informar?",
+    "duration_seconds": 4.11267,
+    "status": "success",
+    "contact_name": "Teste"
+  },
+  {
+    "timestamp": "2025-12-05T19:32:28.249184",
+    "category": "perguntas_complexas",
+    "question": "Quais campanhas têm o melhor CTR e menor CPC?",
+    "response": "Por favor, informe o ID da conta de anúncio para que eu possa consultar os dados das campanhas com melhor CTR e menor CPC.",
+    "duration_seconds": 0.83594,
+    "status": "success",
+    "contact_name": "Teste"
+  }
+]
