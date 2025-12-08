@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  agente-campanhas:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agente-campanhas
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # OpenAI
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      
+      # Facebook/Meta
+      - FACEBOOK_ACCESS_TOKEN=${FACEBOOK_ACCESS_TOKEN}
+      - FACEBOOK_APP_ID=${FACEBOOK_APP_ID}
+      - FACEBOOK_APP_SECRET=${FACEBOOK_APP_SECRET}
+      
+      # WhatsApp Business API (se usar)
+      - WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID}
+      - WHATSAPP_BUSINESS_ACCOUNT_ID=${WHATSAPP_BUSINESS_ACCOUNT_ID}
+      - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN}
+      - WHATSAPP_WEBHOOK_VERIFY_TOKEN=${WHATSAPP_WEBHOOK_VERIFY_TOKEN}
+      
+      # Evolution API (se usar)
+      - EVOLUTION_API_URL=${EVOLUTION_API_URL}
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+      - EVOLUTION_INSTANCE=${EVOLUTION_INSTANCE}
+      
+      # Provider ativo (evolution ou whatsapp_business)
+      - ACTIVE_WHATSAPP_PROVIDER=${ACTIVE_WHATSAPP_PROVIDER:-evolution}
+      
+      # Database
+      - DATABASE_URL=sqlite:////app/data/agente_campanhas.db
+    volumes:
+      # Persistir banco de dados
+      - ./data:/app/data
+      # Opcionalmente montar .env para desenvolvimento
+      # - ./.env:/app/.env:ro
+    networks:
+      - agente-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  agente-network:
+    driver: bridge
+
+volumes:
+  agente-data:

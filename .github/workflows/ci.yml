@@ -1,0 +1,66 @@
+name: CI - Tests and Linting
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Check imports
+      run: |
+        python -c "from tools import AGENT_TOOLS; print(f'✅ {len(AGENT_TOOLS)} tools loaded')"
+
+    - name: Verify default accounts
+      run: |
+        python -c "from default_accounts import DEFAULT_ACCOUNT_IDS; print(f'✅ {len(DEFAULT_ACCOUNT_IDS)} default accounts configured')"
+
+    - name: Check agent initialization
+      run: |
+        python -c "from agent import agent_graph; print('✅ Agent graph compiled successfully')"
+
+    - name: Run token cost calculator
+      run: |
+        python calculate_token_cost.py 5
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install flake8
+      run: |
+        pip install flake8
+
+    - name: Lint with flake8
+      run: |
+        # Stop on syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      continue-on-error: true
