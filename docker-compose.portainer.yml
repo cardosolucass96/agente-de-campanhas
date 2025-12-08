@@ -1,39 +1,54 @@
-version: '3.8'
+version: "3.7"
 
 services:
   agente-campanhas:
     image: ghcr.io/cardosolucass96/agente-de-campanhas:latest
-    ports:
-      - "8000:8000"
+    
+    networks:
+      - CardosoNet
+
     environment:
-      # OpenAI
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      
-      # Facebook/Meta
       - FACEBOOK_ACCESS_TOKEN=${FACEBOOK_ACCESS_TOKEN}
       - FACEBOOK_APP_ID=${FACEBOOK_APP_ID}
       - FACEBOOK_APP_SECRET=${FACEBOOK_APP_SECRET}
-      
-      # WhatsApp Business API (se usar)
       - WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID}
       - WHATSAPP_BUSINESS_ACCOUNT_ID=${WHATSAPP_BUSINESS_ACCOUNT_ID}
       - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN}
       - WHATSAPP_WEBHOOK_VERIFY_TOKEN=${WHATSAPP_WEBHOOK_VERIFY_TOKEN}
-      
-      # Evolution API (se usar)
       - EVOLUTION_API_URL=${EVOLUTION_API_URL}
       - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
       - EVOLUTION_INSTANCE=${EVOLUTION_INSTANCE}
-      
-      # Provider ativo (evolution ou whatsapp_business)
       - ACTIVE_WHATSAPP_PROVIDER=${ACTIVE_WHATSAPP_PROVIDER:-evolution}
-      
-      # Database
       - DATABASE_URL=sqlite:////app/data/agente_campanhas.db
+      - TZ=America/Sao_Paulo
+
     volumes:
-      # Persistir banco de dados
-      - agente-data:/app/data
+      - agente_campanhas_data:/app/data
+
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.agente_campanhas.rule=Host(`agente.cardosolucas.com`)
+        - traefik.http.routers.agente_campanhas.entrypoints=websecure
+        - traefik.http.routers.agente_campanhas.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.agente_campanhas.service=agente_campanhas
+        - traefik.http.services.agente_campanhas.loadbalancer.server.port=8000
 
 volumes:
-  agente-data:
+  agente_campanhas_data:
     driver: local
+
+networks:
+  CardosoNet:
+    external: true
+    name: CardosoNet
