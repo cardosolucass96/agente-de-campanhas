@@ -37,11 +37,11 @@ jobs:
 
     - name: Check agent initialization
       run: |
-        python -c "from agent import agent_graph; print('✅ Agent graph compiled successfully')"
+        python -c "import os; os.environ['OPENAI_API_KEY']='sk-test'; from agent import agent_graph; print('✅ Agent graph compiled successfully')"
 
     - name: Run token cost calculator
       run: |
-        python calculate_token_cost.py 5
+        OPENAI_API_KEY=sk-test python calculate_token_cost.py 5
 
   lint:
     runs-on: ubuntu-latest
