@@ -144,8 +144,18 @@ async def send_and_save_message(phone: str, message: str, conversation_id: int, 
     Envia mensagem via WhatsApp adapter e salva no banco.
     Se mensagem for longa, divide e envia múltiplas partes.
     """
+    # Validar mensagem antes de processar
+    if not message or not message.strip():
+        print(f"⚠️ Tentativa de enviar mensagem vazia para {phone}")
+        return
+    
     # Formatar mensagem
     formatted_message = format_message_for_whatsapp(message)
+    
+    # Validar após formatação
+    if not formatted_message or not formatted_message.strip():
+        print(f"⚠️ Mensagem ficou vazia após formatação. Original: {message[:100]}")
+        return
     
     # Dividir se necessário
     parts = await split_long_message(formatted_message, max_chars=800)
@@ -156,6 +166,9 @@ async def send_and_save_message(phone: str, message: str, conversation_id: int, 
     for i, part in enumerate(parts, 1):
         if len(parts) > 1:
             print(f"   Parte {i}/{len(parts)}: {len(part)} caracteres")
+        
+        # Debug: mostrar preview da mensagem
+        print(f"   Preview: {part[:100]}...")
         
         # Enviar via WhatsApp adapter
         result = await whatsapp_adapter.send_message(phone, part)
@@ -233,7 +246,17 @@ async def process_stacked_messages(phone: str):
                     previous_messages=previous_messages,
                     contact_name=contact_name
                 )
-                print(f"🤖 Resposta do agente: {response[:100]}...")
+                
+                # Debug detalhado da resposta
+                print(f"🤖 Resposta do agente recebida:")
+                print(f"   - Tipo: {type(response)}")
+                print(f"   - Tamanho: {len(response) if response else 0} caracteres")
+                print(f"   - Preview: {response[:100] if response else 'VAZIO'}...")
+                
+                # Validar resposta
+                if not response or not response.strip():
+                    print("❌ ERRO: Agente retornou resposta vazia!")
+                    response = "Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente."
                 
                 # Verificar se há lista ou botões pendentes
                 from tools.whatsapp_list import get_pending_list

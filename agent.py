@@ -481,7 +481,14 @@ async def run_agent(message: str, conversation_id: int = None, previous_messages
     
     # Retornar a última mensagem do agente
     last_message = result["messages"][-1]
-    return last_message.content
+    response = last_message.content if hasattr(last_message, 'content') else str(last_message)
+    
+    # Validar resposta não vazia
+    if not response or not response.strip():
+        print("⚠️ Agente retornou resposta vazia, usando fallback")
+        return "Desculpe, não consegui processar sua solicitação. Pode reformular a pergunta?"
+    
+    return response
 
 
 # NOTA: O system prompt real está implementado dentro da função call_model() (linhas ~64-261)

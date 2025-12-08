@@ -189,6 +189,17 @@ class WhatsAppBusinessAdapter(WhatsAppAdapter):
         # Limpar número (remover @s.whatsapp.net se vier)
         clean_phone = phone.replace("@s.whatsapp.net", "")
         
+        # Validar mensagem não vazia
+        if not message or not message.strip():
+            print(f"⚠️ Tentativa de enviar mensagem vazia para {clean_phone}")
+            return {
+                "status": "error",
+                "error": "Message body is empty"
+            }
+        
+        # Garantir que a mensagem não é apenas whitespace
+        message = message.strip()
+        
         payload = {
             "messaging_product": "whatsapp",
             "to": clean_phone,
@@ -205,7 +216,21 @@ class WhatsAppBusinessAdapter(WhatsAppAdapter):
         
         async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload, headers=headers, timeout=30.0)
-            return response.json()
+            result = response.json()
+            
+            # Log de erro detalhado
+            if response.status_code != 200:
+                print(f"❌ Erro ao enviar mensagem: Status {response.status_code}")
+                print(f"❌ Resposta: {result}")
+                return {
+                    "status": "error",
+                    "error": result
+                }
+            
+            return {
+                "status": "success",
+                "data": result
+            }
     
     async def send_list(self, phone: str, list_data: Dict[str, Any]) -> Dict[str, Any]:
         """Envia lista interativa via WhatsApp Business API"""
