@@ -373,12 +373,18 @@ class WhatsAppBusinessAdapter(WhatsAppAdapter):
         """Parse WhatsApp Business API webhook"""
         # Webhook format: https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components
         
+        print(f"🔍 WhatsApp Business parse_webhook - data completo: {data}")
+        
         entry = data.get("entry", [{}])[0]
         changes = entry.get("changes", [{}])[0]
         value = changes.get("value", {})
         
+        print(f"🔍 value: {value}")
+        
         # Mensagens recebidas
         messages = value.get("messages", [])
+        print(f"🔍 messages: {messages}")
+        
         if messages:
             msg = messages[0]
             
