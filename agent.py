@@ -7,6 +7,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, ToolMe
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 import os
+import traceback
 from dotenv import load_dotenv
 
 from tools import AGENT_TOOLS
@@ -416,8 +417,10 @@ def format_for_whatsapp(state: AgentState):
     return {"messages": messages}
 
 
-def call_tools(state: AgentState):
-    """Execute tools based on the agent's tool calls"""
+
+
+async def call_tools(state: AgentState):
+    """Execute tools based on the agent's tool calls (async support)"""
     messages = state["messages"]
     last_message = messages[-1]
     
@@ -433,11 +436,14 @@ def call_tools(state: AgentState):
         tool = next((t for t in AGENT_TOOLS if t.name == tool_name), None)
         if tool:
             try:
-                result = tool.invoke(tool_args)
+                # Use ainvoke for async invocation (required in newer LangChain versions)
+                result = await tool.ainvoke(tool_args)
                 tool_messages.append(
                     ToolMessage(content=str(result), tool_call_id=tool_id)
                 )
             except Exception as e:
+                print(f"❌ Erro ao executar tool {tool_name}: {e}")
+                traceback.print_exc()
                 tool_messages.append(
                     ToolMessage(content=f"Error: {str(e)}", tool_call_id=tool_id)
                 )
