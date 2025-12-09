@@ -8,7 +8,7 @@ from typing import List, Dict
 pending_buttons = None
 
 @tool
-def send_whatsapp_buttons(
+async def send_whatsapp_buttons(
     body_text: str,
     buttons: List[Dict[str, str]],
     footer_text: str = None

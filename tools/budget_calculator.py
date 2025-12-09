@@ -5,7 +5,7 @@ from langchain_core.tools import tool
 
 
 @tool
-def calculate_ad_budget(daily_budget: float, days: int, currency: str = "BRL") -> str:
+async def calculate_ad_budget(daily_budget: float, days: int, currency: str = "BRL") -> str:
     """
     Calcula o orçamento total de uma campanha de anúncios.
     
