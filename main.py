@@ -752,11 +752,12 @@ async def whatsapp_business_webhook(request: Request, db: Session = Depends(get_
         data = await request.json()
         print(f"📱 WhatsApp Business webhook recebido: {data}")
         
-        # Validar signature se APP_SECRET estiver configurado
+        # Validar signature se APP_SECRET estiver configurado (pode ser desabilitado via WHATSAPP_DISABLE_SIGNATURE_VALIDATION=true)
         from whatsapp_config import WhatsAppBusinessConfig
         config = ACTIVE_WHATSAPP_CONFIG
-        
-        if isinstance(config, WhatsAppBusinessConfig) and config.app_secret:
+        disable_signature = os.getenv("WHATSAPP_DISABLE_SIGNATURE_VALIDATION", "false").lower() == "true"
+
+        if not disable_signature and isinstance(config, WhatsAppBusinessConfig) and config.app_secret:
             signature = request.headers.get("X-Hub-Signature-256", "")
             body = await request.body()
             
@@ -987,3 +988,4 @@ async def chat_with_agent(message: str, conversation_id: int = None):
         return {"status": "success", "response": response}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
