@@ -272,7 +272,7 @@ async def compare_campaign_periods(
             f"📅 *{period1_name}*: {period1_start.strftime('%d/%m')} - {period1_end.strftime('%d/%m')}",
             f"📅 *{period2_name}*: {period2_start.strftime('%d/%m')} - {period2_end.strftime('%d/%m')}",
             f"",
-            f"*Resultados:*"
+            f"*Métricas:*"
         ]
         
         # Formatação de métricas
@@ -286,8 +286,8 @@ async def compare_campaign_periods(
             'cpm': ('📊 CPM', 'cpm'),
             'cpp': ('💸 CPP', 'cpp'),
             'frequency': ('🔄 Frequência', 'frequency'),
-            'conversions': ('🎯 Conversões', 'conversions'),
-            'cost_per_conversion': ('💰 Custo/Conv', 'cost_per_conversion')
+            'conversions': ('🎯 Leads', 'conversions'),
+            'cost_per_conversion': ('💰 CPL', 'cost_per_conversion')
         }
         
         for metric in metrics_list:

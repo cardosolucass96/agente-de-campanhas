@@ -24,7 +24,7 @@ async def get_campaign_insights(
     Busca dados de desempenho (insights) de campanhas do Facebook Ads.
     Use esta ferramenta para ver como as campanhas estão performando.
     
-    SEMPRE inclui: gastos (spend), resultados (actions), CPR (custo por resultado)
+    SEMPRE inclui: gastos (spend), leads (actions), CPL (custo por lead)
     
     MÉTRICAS ADICIONAIS DISPONÍVEIS (use no parâmetro metrics, separadas por vírgula):
     - impressions: número de vezes que anúncios foram exibidos
@@ -167,15 +167,15 @@ async def get_campaign_insights(
             
             total_results += results
             
-            # Custo por resultado
-            cost_per_result = spend / results if results > 0 else 0
+            # Custo por lead
+            cost_per_lead = spend / results if results > 0 else 0
             
             result += f"{idx}. *{name}*\n"
             result += f"   💰 Gasto: R$ {spend:.2f}\n"
             
             if results > 0:
-                result += f"   📈 Resultados: {results}\n"
-                result += f"   💵 CPR: R$ {cost_per_result:.2f}\n"
+                result += f"   🎯 Leads: {results}\n"
+                result += f"   💵 CPL: R$ {cost_per_lead:.2f}\n"
             
             # Métricas adicionais
             if "impressions" in additional_metrics:
@@ -216,8 +216,8 @@ async def get_campaign_insights(
         
         if total_results > 0:
             avg_cost = total_spend / total_results
-            result += f"📈 Resultados: {total_results}\n"
-            result += f"💵 CPR médio: R$ {avg_cost:.2f}\n"
+            result += f"🎯 Total de Leads: {total_results}\n"
+            result += f"💵 CPL médio: R$ {avg_cost:.2f}\n"
         
         if total_impressions > 0:
             result += f"👁️ Total impressões: {total_impressions:,}\n"
