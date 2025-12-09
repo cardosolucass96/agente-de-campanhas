@@ -773,7 +773,10 @@ async def whatsapp_business_webhook(request: Request, db: Session = Depends(get_
         # Parse webhook usando adaptador
         parsed_data = whatsapp_adapter.parse_webhook(data)
         
+        print(f"🔍 Parsed data: {parsed_data}")
+        
         if not parsed_data:
+            print("❌ Parse retornou None/vazio")
             return {"status": "ignored", "reason": "not a message event"}
         
         if parsed_data["type"] == "message":
