@@ -49,6 +49,9 @@ def call_model(state: AgentState):
     messages = state["messages"]
     contact_name = state.get("contact_name")
     
+    print(f"🔵 call_model: {len(messages)} mensagens no estado")
+    print(f"🔵 Última mensagem: {messages[-1].content[:100] if messages else 'VAZIO'}...")
+    
     # Adicionar system prompt se não houver SystemMessage ainda
     from langchain_core.messages import SystemMessage
     from datetime import datetime
@@ -168,17 +171,18 @@ SEMPRE chame: send_whatsapp_buttons
   - body_text: "Ver impacto das mudanças?"
   - buttons: [id="1" title="📈 Antes vs Depois"]
 
-**FLUXO OBRIGATÓRIO:**
-1. Apresente os dados/análise como texto normal
-2. PARE de escrever
-3. Chame a ferramenta send_whatsapp_buttons com as sugestões
-4. NÃO escreva mais nada após chamar a ferramenta
+**FLUXO COM FERRAMENTAS DE INTERAÇÃO (Listas/Botões):**
+Quando usar send_whatsapp_list ou send_whatsapp_buttons:
+1. Chame a ferramenta PRIMEIRO com as opções
+2. O sistema processará e enviará a interface interativa
+3. DEPOIS, escreva UMA mensagem curta (1-2 linhas) confirmando ou contextualizando
 
 **IMPORTANTE:**
 - SEMPRE use a FERRAMENTA send_whatsapp_buttons após apresentar dados
 - NUNCA escreva botões como texto entre colchetes []
 - Se você quer sugerir opções, DEVE usar a ferramenta
 - Não use listas (send_whatsapp_list) para sugestões, apenas no menu inicial!
+- SEMPRE escreva uma mensagem de acompanhamento após chamar ferramentas de interação
 
 **Análise Inteligente:**
 - Se CTR > 2%: "Excelente! CTR acima da média"
@@ -270,7 +274,35 @@ O campo "saldo" (balance) retornado pela API do Facebook é o SALDO DEVEDOR.
 Seja prestativo e sempre confirme as ações realizadas.{name_context}""")
         messages = [system_msg] + messages
     
-    response = llm_with_tools.invoke(messages)
+    print(f"🔵 Invocando LLM com {len(messages)} mensagens...")
+    try:
+        response = llm_with_tools.invoke(messages)
+        print(f"🔵 LLM respondeu: {type(response)}")
+        
+        # Debug detalhado do response
+        if hasattr(response, 'content'):
+            content_str = str(response.content) if response.content else "VAZIO"
+            print(f"🔵 Conteúdo (len={len(content_str)}): {content_str[:100]}...")
+        else:
+            print(f"🔵 Response não tem 'content'")
+            
+        if hasattr(response, 'tool_calls'):
+            print(f"🔵 Tem tool_calls: {len(response.tool_calls) > 0}")
+            if response.tool_calls:
+                print(f"🔵 Tool calls: {[tc['name'] for tc in response.tool_calls]}")
+        
+        # Se response vazio, logar tudo
+        if not response.content and (not hasattr(response, 'tool_calls') or not response.tool_calls):
+            print(f"❌ RESPONSE COMPLETAMENTE VAZIO!")
+            print(f"❌ Response completo: {response}")
+            print(f"❌ Response dict: {response.dict() if hasattr(response, 'dict') else 'N/A'}")
+            
+    except Exception as e:
+        print(f"❌ Erro ao invocar LLM: {e}")
+        print(f"❌ Tipo do erro: {type(e)}")
+        import traceback
+        traceback.print_exc()
+        raise
     
     return {"messages": [response]}
 
