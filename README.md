@@ -339,3 +339,5 @@ Este projeto está sob licença MIT.
 ---
 
 Desenvolvido com ❤️ usando FastAPI, LangChain e OpenAI
+#   T e s t   d e p l o y  
+ 
