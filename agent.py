@@ -319,6 +319,25 @@ def format_for_whatsapp(state: AgentState):
         # Converter Markdown para WhatsApp
         import re
         
+        # REMOVER CHAMADAS DE FUNÇÃO QUE APARECEM NO TEXTO
+        # Exemplos: send_whatsapp_buttons({...}), send_whatsapp_list({...})
+        # Padrões a remover:
+        # 1. send_whatsapp_buttons(...) ou send_whatsapp_list(...)
+        # 2. Qualquer coisa que pareça sintaxe de código com { } e :
+        
+        # Remove chamadas diretas de função
+        content = re.sub(r'send_whatsapp_(?:buttons|list)\s*\([^)]*\)', '', content, flags=re.DOTALL)
+        
+        # Remove blocos que parecem JSON/código (começam e terminam com {})
+        # Mas só se tiverem : e " (indicadores de JSON)
+        content = re.sub(r'\{[^}]*["\'][^}]*:[^}]*\}', '', content, flags=re.DOTALL)
+        
+        # Remove linhas que contêm sintaxe de código comum
+        content = re.sub(r'^.*(?:body_text|buttons|id|title)\s*:\s*.*$', '', content, flags=re.MULTILINE)
+        
+        # Limpar linhas vazias extras que podem ter ficado após remoção
+        content = re.sub(r'\n\s*\n\s*\n+', '\n\n', content)
+        
         # DETECTAR E CONVERTER BOTÕES ESCRITOS COMO TEXTO EM BOTÕES REAIS
         # Padrões aceitos:
         # - [texto do botão]
