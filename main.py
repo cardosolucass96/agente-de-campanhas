@@ -421,6 +421,97 @@ async def health_check():
 async def root():
     return {"message": "Agente de Campanhas API"}
 
+@app.post("/test/message")
+async def test_message(request: Request, db: Session = Depends(get_db)):
+    """
+    Endpoint de teste para simular mensagem direta ao agente
+    Body: {"message": "sua mensagem aqui", "phone": "5511999999999"}
+    """
+    try:
+        data = await request.json()
+        message = data.get("message", "")
+        phone = data.get("phone", "5511999999999")
+        contact_name = data.get("name", "Teste")
+        
+        print(f"\n{'='*50}")
+        print(f"🧪 TESTE DIRETO - Mensagem: {message}")
+        print(f"{'='*50}\n")
+        
+        # Criar ou buscar contato e conversação
+        contact = db.query(Contact).filter(Contact.phone == phone).first()
+        
+        if not contact:
+            contact = Contact(phone=phone, name=contact_name)
+            db.add(contact)
+            db.commit()
+            db.refresh(contact)
+        
+        conversation = db.query(Conversation).filter(
+            Conversation.contact_id == contact.id
+        ).first()
+        
+        if not conversation:
+            conversation = Conversation(contact_id=contact.id)
+            db.add(conversation)
+            db.commit()
+            db.refresh(conversation)
+        
+        # Salvar mensagem recebida
+        incoming_msg = Message(
+            conversation_id=conversation.id,
+            text=message,
+            direction="incoming",
+            status="received"
+        )
+        db.add(incoming_msg)
+        db.commit()
+        
+        # Buscar contexto
+        previous_messages = db.query(Message).filter(
+            Message.conversation_id == conversation.id
+        ).order_by(Message.created_at.desc()).limit(5).all()
+        previous_messages.reverse()
+        
+        # Chamar agente
+        print(f"🤖 Chamando agente...")
+        response = await run_agent(
+            message=message,
+            conversation_id=conversation.id,
+            previous_messages=previous_messages,
+            contact_name=contact_name
+        )
+        
+        print(f"\n{'='*50}")
+        print(f"🤖 RESPOSTA DO AGENTE:")
+        print(f"{'='*50}")
+        print(f"Tipo: {type(response)}")
+        print(f"Tamanho: {len(response) if response else 0} caracteres")
+        print(f"Conteúdo:\n{response}")
+        print(f"{'='*50}\n")
+        
+        # Salvar resposta
+        outgoing_msg = Message(
+            conversation_id=conversation.id,
+            text=response,
+            direction="outgoing",
+            status="sent"
+        )
+        db.add(outgoing_msg)
+        db.commit()
+        
+        return {
+            "status": "success",
+            "message": message,
+            "response": response,
+            "response_length": len(response) if response else 0
+        }
+        
+    except Exception as e:
+        print(f"❌ Erro no teste: {e}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
 @app.post("/evo")
 async def evolution_webhook(request: Request, db: Session = Depends(get_db)):
     """
@@ -486,12 +577,16 @@ async def evolution_webhook(request: Request, db: Session = Depends(get_db)):
             if from_me:
                 return {"status": "ignored", "reason": "message from me"}
             
-            # Extrair texto da mensagem
-            text = ""
-            if "conversation" in message:
-                text = message["conversation"]
-            elif "extendedTextMessage" in message:
-                text = message["extendedTextMessage"].get("text", "")
+            # Usar o adapter para processar a mensagem
+            parsed_data = whatsapp_adapter.parse_webhook(data)
+            text = parsed_data.get("text", "")
+            interactive_data = parsed_data.get("interactive_data")
+            is_interactive = interactive_data is not None
+            
+            if is_interactive:
+                print(f"🔘 Resposta interativa de {remote_jid}: {text}")
+            else:
+                print(f"💬 Mensagem de {remote_jid}: {text}")
             
             # Extrair nome do contato
             push_name = message_data.get("pushName", "")
@@ -546,6 +641,22 @@ async def evolution_webhook(request: Request, db: Session = Depends(get_db)):
             db.add(db_message)
             db.commit()
             
+            # Se for mensagem interativa, enriquecer com contexto
+            if is_interactive:
+                last_bot_msg = db.query(Message).filter(
+                    Message.conversation_id == conversation.id,
+                    Message.direction == "outgoing"
+                ).order_by(Message.created_at.desc()).first()
+                
+                if last_bot_msg:
+                    context_preview = last_bot_msg.text[:150].replace('\n', ' ')
+                    enriched_text = f"[CONTEXTO: O usuário clicou no botão/lista '{text}' em resposta à mensagem: '{context_preview}...']\n\nUsuário selecionou: {text}"
+                    print(f"📝 Texto enriquecido com contexto da mensagem anterior")
+                else:
+                    enriched_text = f"[CONTEXTO: O usuário clicou no botão/lista '{text}']\n\nUsuário selecionou: {text}"
+            else:
+                enriched_text = text
+            
             # Log da ação do agente
             agent_log = AgentLog(
                 conversation_id=conversation.id,
@@ -562,7 +673,7 @@ async def evolution_webhook(request: Request, db: Session = Depends(get_db)):
             # SISTEMA DE EMPILHAMENTO DE MENSAGENS
             # Adicionar mensagem à fila do contato
             queue_data = message_queue[remote_jid]
-            queue_data["messages"].append(text)
+            queue_data["messages"].append(enriched_text)  # Usa texto enriquecido se interativo
             queue_data["contact_name"] = contact.name
             queue_data["conversation_id"] = conversation.id
             
@@ -676,7 +787,14 @@ async def whatsapp_business_webhook(request: Request, db: Session = Depends(get_
             if from_me:
                 return {"status": "ignored", "reason": "message from me"}
             
-            print(f"💬 Mensagem de {remote_jid}: {text}")
+            # Verificar se é resposta interativa (botão/lista)
+            interactive_data = parsed_data.get("interactive_data")
+            is_interactive = interactive_data is not None
+            
+            if is_interactive:
+                print(f"🔘 Resposta interativa de {remote_jid}: {text}")
+            else:
+                print(f"💬 Mensagem de {remote_jid}: {text}")
             
             # Processar igual ao Evolution (mesma lógica)
             # Verificar/criar contato
@@ -721,6 +839,22 @@ async def whatsapp_business_webhook(request: Request, db: Session = Depends(get_
             db.add(db_message)
             db.commit()
             
+            # Se for mensagem interativa, enriquecer com contexto
+            if is_interactive:
+                last_bot_msg = db.query(Message).filter(
+                    Message.conversation_id == conversation.id,
+                    Message.direction == "outgoing"
+                ).order_by(Message.created_at.desc()).first()
+                
+                if last_bot_msg:
+                    context_preview = last_bot_msg.text[:150].replace('\n', ' ')
+                    enriched_text = f"[CONTEXTO: O usuário clicou no botão/lista '{text}' em resposta à mensagem: '{context_preview}...']\n\nUsuário selecionou: {text}"
+                    print(f"📝 Texto enriquecido com contexto da mensagem anterior")
+                else:
+                    enriched_text = f"[CONTEXTO: O usuário clicou no botão/lista '{text}']\n\nUsuário selecionou: {text}"
+            else:
+                enriched_text = text
+            
             # Log
             agent_log = AgentLog(
                 conversation_id=conversation.id,
@@ -736,7 +870,7 @@ async def whatsapp_business_webhook(request: Request, db: Session = Depends(get_
             
             # Sistema de empilhamento
             queue_data = message_queue[remote_jid]
-            queue_data["messages"].append(text)
+            queue_data["messages"].append(enriched_text)  # Usa texto enriquecido se interativo
             queue_data["contact_name"] = contact.name
             queue_data["conversation_id"] = conversation.id
             

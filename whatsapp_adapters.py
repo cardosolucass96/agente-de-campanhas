@@ -143,12 +143,35 @@ class EvolutionAdapter(WhatsAppAdapter):
             key = message_data.get("key", {})
             message = message_data.get("message", {})
             
-            # Extrair texto
+            # Extrair texto baseado no tipo de mensagem
             text = ""
+            interactive_data = None
+            
+            # Mensagem de texto normal
             if "conversation" in message:
                 text = message["conversation"]
             elif "extendedTextMessage" in message:
                 text = message["extendedTextMessage"].get("text", "")
+            
+            # Mensagens interativas (botões e listas)
+            elif "listResponseMessage" in message:
+                # Resposta de lista interativa
+                list_response = message["listResponseMessage"]
+                # Pegar o título da opção selecionada
+                text = list_response.get("title", "")
+                # Se não tiver título, pegar singleSelectReply
+                if not text and "singleSelectReply" in list_response:
+                    text = list_response["singleSelectReply"].get("selectedRowId", "")
+                interactive_data = list_response
+                print(f"🔘 Lista clicada: {text}")
+                
+            elif "buttonsResponseMessage" in message:
+                # Resposta de botão
+                button_response = message["buttonsResponseMessage"]
+                # Pegar o ID ou displayText do botão clicado
+                text = button_response.get("selectedDisplayText", "") or button_response.get("selectedButtonId", "")
+                interactive_data = button_response
+                print(f"🔘 Botão clicado: {text}")
             
             return {
                 "type": "message",
@@ -158,7 +181,8 @@ class EvolutionAdapter(WhatsAppAdapter):
                 "from_me": key.get("fromMe", False),
                 "push_name": message_data.get("pushName", ""),
                 "timestamp": message_data.get("messageTimestamp"),
-                "remote_jid_alt": key.get("remoteJidAlt", "")
+                "remote_jid_alt": key.get("remoteJidAlt", ""),
+                "interactive_data": interactive_data
             }
         
         elif event == "presence.update":
