@@ -320,20 +320,24 @@ def format_for_whatsapp(state: AgentState):
         import re
         
         # REMOVER CHAMADAS DE FUNÇÃO QUE APARECEM NO TEXTO
-        # Exemplos: send_whatsapp_buttons({...}), send_whatsapp_list({...})
-        # Padrões a remover:
-        # 1. send_whatsapp_buttons(...) ou send_whatsapp_list(...)
-        # 2. Qualquer coisa que pareça sintaxe de código com { } e :
+        # O GPT-4 às vezes retorna a sintaxe da tool call no conteúdo da mensagem
         
-        # Remove chamadas diretas de função
-        content = re.sub(r'send_whatsapp_(?:buttons|list)\s*\([^)]*\)', '', content, flags=re.DOTALL)
+        # 1. Remove tudo desde "send_whatsapp_" até o fim da linha ou até encontrar 2 quebras de linha
+        content = re.sub(r'send_whatsapp_(?:buttons|list)\s*\(.*?\)\s*(?:\n|$)', '', content, flags=re.DOTALL)
         
-        # Remove blocos que parecem JSON/código (começam e terminam com {})
-        # Mas só se tiverem : e " (indicadores de JSON)
-        content = re.sub(r'\{[^}]*["\'][^}]*:[^}]*\}', '', content, flags=re.DOTALL)
+        # 2. Remove blocos que parecem código/JSON isolados
+        # Procura por linhas com {, }, [, ], id:, title:, body_text:, buttons:
+        lines_to_keep = []
+        for line in content.split('\n'):
+            # Se a linha tem sintaxe de código, pular
+            if re.search(r'(?:body_text|buttons|title|id)\s*:', line):
+                continue
+            # Se a linha é só {, }, [, ], pular
+            if re.match(r'^\s*[\{\}\[\]]\s*$', line):
+                continue
+            lines_to_keep.append(line)
         
-        # Remove linhas que contêm sintaxe de código comum
-        content = re.sub(r'^.*(?:body_text|buttons|id|title)\s*:\s*.*$', '', content, flags=re.MULTILINE)
+        content = '\n'.join(lines_to_keep)
         
         # Limpar linhas vazias extras que podem ter ficado após remoção
         content = re.sub(r'\n\s*\n\s*\n+', '\n\n', content)
