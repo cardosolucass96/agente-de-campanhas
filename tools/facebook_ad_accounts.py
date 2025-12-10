@@ -36,25 +36,65 @@ async def get_facebook_ad_accounts(business_id: str = None) -> str:
         6: 'Fechada'
     }
     
-    # SEMPRE usar contas padrão configuradas
-    accounts = [
-        {
-            "id": info["act_id"],
-            "name": info["name"],
-            "account_status": 1,  # Ativa
-            "currency": "BRL",
-            "balance": 0
-        }
-        for acc_id, info in DEFAULT_AD_ACCOUNTS.items()
-    ]
+    accounts = []
+    
+    # Buscar dados reais de cada conta na API do Facebook
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        for acc_id, info in DEFAULT_AD_ACCOUNTS.items():
+            try:
+                # Buscar dados da conta na API
+                url = f"https://graph.facebook.com/v21.0/{info['act_id']}"
+                params = {
+                    "fields": "name,account_status,currency,balance,amount_spent,spend_cap",
+                    "access_token": FACEBOOK_ACCESS_TOKEN
+                }
+                response = await client.get(url, params=params)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    accounts.append({
+                        "id": info["act_id"],
+                        "name": info["name"],  # Usar nome configurado
+                        "account_status": data.get("account_status", 1),
+                        "currency": data.get("currency", "BRL"),
+                        "balance": int(data.get("balance", 0)),  # Em centavos
+                        "amount_spent": int(data.get("amount_spent", 0)),  # Em centavos
+                        "spend_cap": int(data.get("spend_cap", 0)) if data.get("spend_cap") else None
+                    })
+                else:
+                    print(f"⚠️ Erro ao buscar {info['act_id']}: {response.status_code}")
+                    # Fallback para dados básicos
+                    accounts.append({
+                        "id": info["act_id"],
+                        "name": info["name"],
+                        "account_status": 1,
+                        "currency": "BRL",
+                        "balance": 0,
+                        "amount_spent": 0,
+                        "spend_cap": None
+                    })
+            except Exception as e:
+                print(f"⚠️ Erro ao buscar {info['act_id']}: {e}")
+                accounts.append({
+                    "id": info["act_id"],
+                    "name": info["name"],
+                    "account_status": 1,
+                    "currency": "BRL",
+                    "balance": 0,
+                    "amount_spent": 0,
+                    "spend_cap": None
+                })
     
     result = f"📊 *{len(accounts)} Contas de Anúncio:*\n\n"
     for idx, acc in enumerate(accounts, 1):
         status_code = acc.get('account_status', 0)
         status_text = account_status_map.get(status_code, f'Desconhecido ({status_code})')
         
-        # Formatar valores monetários com 2 casas decimais
+        # Formatar valores monetários (API retorna em centavos)
         balance = float(acc.get('balance', 0)) / 100
+        amount_spent = float(acc.get('amount_spent', 0)) / 100
+        spend_cap = acc.get('spend_cap')
+        
         currency = acc.get('currency', 'BRL')
         currency_symbol = 'R$' if currency == 'BRL' else currency
         
@@ -63,7 +103,15 @@ async def get_facebook_ad_accounts(business_id: str = None) -> str:
         
         result += f"{idx}. *{name}*\n"
         result += f"   - Status: {status_text}\n"
-        result += f"   - Saldo: {currency_symbol} {balance:.2f}\n"
+        result += f"   - Saldo devedor: {currency_symbol} {balance:.2f}\n"
+        result += f"   - Total gasto: {currency_symbol} {amount_spent:.2f}\n"
+        
+        if spend_cap:
+            spend_cap_value = float(spend_cap) / 100
+            remaining = spend_cap_value - amount_spent
+            result += f"   - Limite: {currency_symbol} {spend_cap_value:.2f}\n"
+            result += f"   - Disponível: {currency_symbol} {remaining:.2f}\n"
+        
         result += f"   - ACT: `{acc.get('id')}`\n\n"
     
     return result
