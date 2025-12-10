@@ -154,17 +154,17 @@ async def get_all_accounts_insights(
             for idx, acc in enumerate(accounts_with_data, 1):
                 result += f"{idx}. *{acc['name']}*\n"
                 result += f"   💰 Gasto: R$ {acc['spend']:.2f}\n"
-                result += f"   🎯 Leads: {acc['results']:,.0f}\n"
-                result += f"   📊 CPL: R$ {acc['cpl']:.2f}\n"
+                result += f"   🎯 Resultados: {acc['results']:,.0f}\n"
+                result += f"   📊 CPR: R$ {acc['cpr']:.2f}\n"
                 result += f"   🆔 `{acc['id']}`\n\n"
             
             result += "━━━━━━━━━━━━━━━━━━━\n"
             result += f"💵 *Total Investido:* R$ {total_spend_all:.2f}\n"
-            result += f"🎯 *Total de Leads:* {total_results_all:,}\n"
+            result += f"🎯 *Total de Resultados:* {total_results_all:,}\n"
             
             if total_results_all > 0:
-                avg_cpl = total_spend_all / total_results_all
-                result += f"📊 *CPL Médio:* R$ {avg_cpl:.2f}\n"
+                avg_cpr = total_spend_all / total_results_all
+                result += f"📊 *CPR Médio:* R$ {avg_cpr:.2f}\n"
         
         if accounts_without_data:
             result += f"\n⚠️ *{len(accounts_without_data)} conta(s) sem campanhas ativas neste período:*\n"
