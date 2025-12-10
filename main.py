@@ -502,18 +502,24 @@ async def whatsapp_business_webhook(request: Request, db: Session = Depends(get_
     """
     Webhook para receber mensagens da WhatsApp Business API
     POST endpoint para processar eventos do WhatsApp
+    
+    Segurança: Valida assinatura X-Hub-Signature-256 do Meta
     """
     try:
-        data = await request.json()
-        print(f"📱 WhatsApp Business webhook recebido: {data}")
+        # Ler body uma vez só (necessário para validação de assinatura)
+        body = await request.body()
+        data = __import__('json').loads(body)
         
-        # Validar signature se APP_SECRET estiver configurado (pode ser desabilitado via WHATSAPP_DISABLE_SIGNATURE_VALIDATION=true)
+        # Validar signature se APP_SECRET estiver configurado
         config = ACTIVE_WHATSAPP_CONFIG
         disable_signature = os.getenv("WHATSAPP_DISABLE_SIGNATURE_VALIDATION", "false").lower() == "true"
 
         if not disable_signature and config.app_secret:
             signature = request.headers.get("X-Hub-Signature-256", "")
-            body = await request.body()
+            
+            if not signature:
+                print("🚫 Requisição sem assinatura - rejeitada")
+                return JSONResponse(content={"error": "Missing signature"}, status_code=403)
             
             expected_signature = "sha256=" + hmac.new(
                 config.app_secret.encode(),
@@ -522,8 +528,14 @@ async def whatsapp_business_webhook(request: Request, db: Session = Depends(get_
             ).hexdigest()
             
             if not hmac.compare_digest(signature, expected_signature):
-                print("⚠️ Invalid signature")
+                print(f"🚫 Assinatura inválida - rejeitada")
                 return JSONResponse(content={"error": "Invalid signature"}, status_code=403)
+            
+            print("✅ Assinatura válida")
+        elif disable_signature:
+            print("⚠️ Validação de assinatura desabilitada")
+        
+        print(f"📱 WhatsApp Business webhook recebido: {data}")
         
         # Parse webhook usando adaptador
         parsed_data = whatsapp_adapter.parse_webhook(data)
