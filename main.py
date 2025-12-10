@@ -14,7 +14,7 @@ import hashlib
 from database import get_db, init_db
 from models import Message, Campaign, Contact, Conversation, AgentLog
 from agent import run_agent
-from whatsapp_config import ACTIVE_WHATSAPP_CONFIG, WhatsAppProvider
+from whatsapp_config import ACTIVE_WHATSAPP_CONFIG
 from whatsapp_adapters import get_whatsapp_adapter
 import re
 
@@ -32,49 +32,14 @@ message_queue: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
 })
 DEBOUNCE_TIME = 6  # segundos para esperar antes de processar
 
-# Mapeamento LID → remoteJid para tracking de presence
-lid_to_jid_map: Dict[str, str] = {}
-
-# Tracking de último evento de digitação
-last_composing_time: Dict[str, float] = {}
-
-
 
 async def simulate_typing(phone: str, duration: float = 3.0):
     """
     Simula digitação durante um período.
-    Alterna entre digitando e pausado para parecer mais natural.
-    Silenciosamente ignora se o provedor não suportar.
+    WhatsApp Business API não suporta este recurso.
     """
-    try:
-        from whatsapp_config import WhatsAppProvider
-        
-        # Pular se for WhatsApp Business (não suporta)
-        if ACTIVE_WHATSAPP_CONFIG.provider == WhatsAppProvider.WHATSAPP_BUSINESS:
-            return
-        
-        # Dividir duração em ciclos de digitação
-        cycles = max(1, int(duration / 2))
-        cycle_duration = duration / cycles
-        
-        for i in range(cycles):
-            # Começar a digitar
-            result = await whatsapp_adapter.send_presence(phone, "composing")
-            if result.get("status") == "not_supported":
-                return
-            
-            # Digitar por um tempo
-            typing_time = cycle_duration * 0.7  # 70% digitando
-            await asyncio.sleep(typing_time)
-            
-            # Pausar brevemente (exceto no último ciclo)
-            if i < cycles - 1:
-                await whatsapp_adapter.send_presence(phone, "paused")
-                pause_time = cycle_duration * 0.3  # 30% pausado
-                await asyncio.sleep(pause_time)
-    
-    except Exception as e:
-        pass  # Silenciar erros de digitação
+    # WhatsApp Business API não suporta envio de presence
+    return
 
 
 async def split_long_message(content: str, max_chars: int = 800) -> list[str]:
@@ -388,29 +353,15 @@ app = FastAPI()
 # Inicializar banco de dados na inicialização da aplicação
 @app.on_event("startup")
 async def startup_event():
-    from whatsapp_config import WhatsAppProvider
-    
     init_db()
     print("Banco de dados inicializado!")
     print(f"⏱️ Sistema de empilhamento: {DEBOUNCE_TIME}s de espera entre mensagens")
-    
-    # Mostrar recursos disponíveis baseado no provider
-    if ACTIVE_WHATSAPP_CONFIG.provider == WhatsAppProvider.EVOLUTION:
-        print(f"📱 Provider: Evolution API")
-        print(f"👀 Marcar como lida: 1.5s após receber")
-        print(f"✍️ Simulação de digitação: Ativada")
-        print(f"⚡ Detecção de 'parou de digitar': Processamento imediato ativado")
-    else:
-        print(f"📱 Provider: WhatsApp Business API (Oficial)")
-        print(f"✅ Envio de mensagens: Suportado")
-        print(f"✅ Recebimento de webhooks: Suportado")
-        print(f"✅ Status de entrega: Suportado")
-        print(f"ℹ️ Marcar como lida: Não suportado pela API oficial")
-        print(f"ℹ️ Simulação de digitação: Não suportado pela API oficial")
+    print(f"📱 Provider: WhatsApp Business API (Oficial)")
+    print(f"✅ Envio de mensagens: Suportado")
+    print(f"✅ Recebimento de webhooks: Suportado")
+    print(f"✅ Status de entrega: Suportado")
+    print(f"✅ Marcar como lida: Suportado")
 
-EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL")
-EVOLUTION_API_KEY = os.getenv("EVOLUTION_API_KEY")
-EVOLUTION_INSTANCE = os.getenv("EVOLUTION_INSTANCE")
 FACEBOOK_ACCESS_TOKEN = os.getenv("FACEBOOK_ACCESS_TOKEN")
 
 @app.get("/health")
@@ -512,195 +463,6 @@ async def test_message(request: Request, db: Session = Depends(get_db)):
         traceback.print_exc()
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
-@app.post("/evo")
-async def evolution_webhook(request: Request, db: Session = Depends(get_db)):
-    """
-    Endpoint para receber webhooks da Evolution API
-    Evento: MESSAGES_UPSERT
-    """
-    try:
-        data = await request.json()
-        print(f"Webhook recebido: {data}")
-        
-        # Processar a mensagem recebida
-        event = data.get("event")
-        instance = data.get("instance")
-        
-        # Detectar quando usuário parou de digitar
-        if event == "presence.update":
-            import time
-            presence_data = data.get("data", {})
-            lid_id = presence_data.get("id", "")  # Vem como 118232061112489@lid
-            presences = presence_data.get("presences", {})
-            
-            # Pegar o presence do usuário
-            user_presence = presences.get(lid_id, {})
-            presence_status = user_presence.get("lastKnownPresence", "")
-            
-            # Mapear LID para remoteJid usando nosso mapeamento
-            remote_jid = lid_to_jid_map.get(lid_id)
-            
-            if remote_jid and remote_jid in message_queue:
-                queue_data = message_queue[remote_jid]
-                
-                # Se está digitando, atualizar timestamp
-                if presence_status == "composing":
-                    last_composing_time[remote_jid] = time.time()
-                    print(f"✍️ Usuário digitando... (atualizado)")
-                
-                # Se parou de digitar (available) E tem mensagens na fila
-                elif presence_status == "available" and len(queue_data["messages"]) > 0:
-                    print(f"⚡ Usuário parou de digitar (available), processando imediatamente!")
-                    # Cancelar timer existente
-                    if queue_data["timer"] is not None:
-                        queue_data["timer"].cancel()
-                    # Processar agora
-                    asyncio.create_task(process_stacked_messages(remote_jid))
-            
-            return {"status": "presence_tracked", "presence": presence_status, "lid": lid_id, "jid": remote_jid}
-        
-        if event == "messages.upsert":
-            message_data = data.get("data", {})
-            message = message_data.get("message", {})
-            key = message_data.get("key", {})
-            
-            remote_jid = key.get("remoteJid", "")
-            from_me = key.get("fromMe", False)
-            message_id = key.get("id", "")
-            remote_jid_alt = key.get("remoteJidAlt", "")  # LID format
-            
-            # Mapear LID para remoteJid para tracking de presence
-            if remote_jid_alt:
-                lid_to_jid_map[remote_jid_alt] = remote_jid
-            
-            # Ignorar mensagens enviadas por nós
-            if from_me:
-                return {"status": "ignored", "reason": "message from me"}
-            
-            # Usar o adapter para processar a mensagem
-            parsed_data = whatsapp_adapter.parse_webhook(data)
-            text = parsed_data.get("text", "")
-            interactive_data = parsed_data.get("interactive_data")
-            is_interactive = interactive_data is not None
-            
-            if is_interactive:
-                print(f"🔘 Resposta interativa de {remote_jid}: {text}")
-            else:
-                print(f"💬 Mensagem de {remote_jid}: {text}")
-            
-            # Extrair nome do contato
-            push_name = message_data.get("pushName", "")
-            
-            print(f"Mensagem de {remote_jid}: {text}")
-            
-            # Verificar/criar contato
-            contact = db.query(Contact).filter(Contact.phone == remote_jid).first()
-            if not contact:
-                contact = Contact(
-                    phone=remote_jid,
-                    name=push_name,
-                    last_interaction=datetime.utcnow()
-                )
-                db.add(contact)
-                db.flush()
-            else:
-                # Atualizar nome se veio no pushName
-                if push_name and not contact.name:
-                    contact.name = push_name
-                contact.last_interaction = datetime.utcnow()
-            
-            # Verificar/criar conversação ativa
-            conversation = db.query(Conversation).filter(
-                Conversation.contact_id == contact.id,
-                Conversation.status == "active"
-            ).first()
-            
-            if not conversation:
-                conversation = Conversation(
-                    contact_id=contact.id,
-                    context={}
-                )
-                db.add(conversation)
-                db.flush()
-            
-            conversation.last_message_at = datetime.utcnow()
-            
-            # Salvar mensagem recebida no banco de dados
-            db_message = Message(
-                instance=instance,
-                remote_jid=remote_jid,
-                message_id=message_id,
-                direction="incoming",
-                from_me=from_me,
-                text=text,
-                status="received",
-                raw_data=data,
-                contact_id=contact.id,
-                conversation_id=conversation.id
-            )
-            db.add(db_message)
-            db.commit()
-            
-            # Se for mensagem interativa, enriquecer com contexto
-            if is_interactive:
-                last_bot_msg = db.query(Message).filter(
-                    Message.conversation_id == conversation.id,
-                    Message.direction == "outgoing"
-                ).order_by(Message.created_at.desc()).first()
-                
-                if last_bot_msg:
-                    context_preview = last_bot_msg.text[:150].replace('\n', ' ')
-                    enriched_text = f"[CONTEXTO: O usuário clicou no botão/lista '{text}' em resposta à mensagem: '{context_preview}...']\n\nUsuário selecionou: {text}"
-                    print(f"📝 Texto enriquecido com contexto da mensagem anterior")
-                else:
-                    enriched_text = f"[CONTEXTO: O usuário clicou no botão/lista '{text}']\n\nUsuário selecionou: {text}"
-            else:
-                enriched_text = text
-            
-            # Log da ação do agente
-            agent_log = AgentLog(
-                conversation_id=conversation.id,
-                action="receive_message",
-                input_data={"message_id": message_id, "text": text},
-                status="success"
-            )
-            db.add(agent_log)
-            db.commit()
-            
-            # Marcar mensagem como lida após 1-2s
-            asyncio.create_task(mark_message_as_read(remote_jid, message_id, delay=1.5))
-            
-            # SISTEMA DE EMPILHAMENTO DE MENSAGENS
-            # Adicionar mensagem à fila do contato
-            queue_data = message_queue[remote_jid]
-            queue_data["messages"].append(enriched_text)  # Usa texto enriquecido se interativo
-            queue_data["contact_name"] = contact.name
-            queue_data["conversation_id"] = conversation.id
-            
-            print(f"📥 Mensagem adicionada à fila ({len(queue_data['messages'])} total)")
-            
-            # Agendar processamento (cancela timer anterior se existir)
-            await schedule_message_processing(remote_jid)
-            
-            return {
-                "status": "queued",
-                "event": event,
-                "instance": instance,
-                "from": remote_jid,
-                "message": text,
-                "saved": True,
-                "conversation_id": conversation.id,
-                "queue_size": len(queue_data["messages"]),
-                "timer_seconds": DEBOUNCE_TIME
-            }
-        
-        return {"status": "received", "event": event}
-        
-    except Exception as e:
-        print(f"Erro ao processar webhook: {e}")
-        db.rollback()
-        return {"status": "error", "message": str(e)}
-
 
 @app.get("/webhook/whatsapp")
 async def whatsapp_business_webhook_verify(
@@ -713,23 +475,16 @@ async def whatsapp_business_webhook_verify(
     GET endpoint usado pelo Facebook para verificar o webhook
     """
     try:
-        from whatsapp_config import WhatsAppBusinessConfig
+        from fastapi.responses import PlainTextResponse
         
         config = ACTIVE_WHATSAPP_CONFIG
         
         print(f"🔍 Webhook verification started")
-        
-        # Verificar se é WhatsApp Business
-        if not isinstance(config, WhatsAppBusinessConfig):
-            print("❌ Config not WhatsApp Business")
-            return JSONResponse(content={"error": "WhatsApp Business API not configured"}, status_code=400)
-        
         print(f"🔍 mode={mode}, token={token}, challenge={challenge}")
         
         # Verificar token
         if mode == "subscribe" and token == config.webhook_verify_token:
             print("✅ Webhook verified successfully")
-            from fastapi.responses import PlainTextResponse
             return PlainTextResponse(content=challenge, status_code=200)
         else:
             print("⚠️ Webhook verification failed")
@@ -753,11 +508,10 @@ async def whatsapp_business_webhook(request: Request, db: Session = Depends(get_
         print(f"📱 WhatsApp Business webhook recebido: {data}")
         
         # Validar signature se APP_SECRET estiver configurado (pode ser desabilitado via WHATSAPP_DISABLE_SIGNATURE_VALIDATION=true)
-        from whatsapp_config import WhatsAppBusinessConfig
         config = ACTIVE_WHATSAPP_CONFIG
         disable_signature = os.getenv("WHATSAPP_DISABLE_SIGNATURE_VALIDATION", "false").lower() == "true"
 
-        if not disable_signature and isinstance(config, WhatsAppBusinessConfig) and config.app_secret:
+        if not disable_signature and config.app_secret:
             signature = request.headers.get("X-Hub-Signature-256", "")
             body = await request.body()
             
@@ -800,7 +554,6 @@ async def whatsapp_business_webhook(request: Request, db: Session = Depends(get_
             else:
                 print(f"💬 Mensagem de {remote_jid}: {text}")
             
-            # Processar igual ao Evolution (mesma lógica)
             # Verificar/criar contato
             contact = db.query(Contact).filter(Contact.phone == remote_jid).first()
             if not contact:

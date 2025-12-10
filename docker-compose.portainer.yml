@@ -21,10 +21,6 @@ services:
       - WHATSAPP_APP_SECRET=${WHATSAPP_APP_SECRET}
       # Desabilita validação de assinatura para debug de webhook (remova depois)
       - WHATSAPP_DISABLE_SIGNATURE_VALIDATION=${WHATSAPP_DISABLE_SIGNATURE_VALIDATION:-true}
-      - EVOLUTION_API_URL=${EVOLUTION_API_URL}
-      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
-      - EVOLUTION_INSTANCE=${EVOLUTION_INSTANCE}
-      - WHATSAPP_PROVIDER=${WHATSAPP_PROVIDER:-evolution}
       - DATABASE_URL=sqlite:////app/data/agente_campanhas.db
       - TZ=America/Sao_Paulo
 

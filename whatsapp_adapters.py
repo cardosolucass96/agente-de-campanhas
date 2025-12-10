@@ -1,14 +1,14 @@
 """
-Adaptadores para diferentes provedores WhatsApp
+Adaptador para WhatsApp Business API (Oficial)
 """
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 import httpx
-from whatsapp_config import WhatsAppProvider, EvolutionConfig, WhatsAppBusinessConfig
+from whatsapp_config import WhatsAppBusinessConfig
 
 
 class WhatsAppAdapter(ABC):
-    """Interface base para adaptadores WhatsApp"""
+    """Interface base para adaptador WhatsApp"""
     
     @abstractmethod
     async def send_message(self, phone: str, message: str) -> Dict[str, Any]:
@@ -34,170 +34,6 @@ class WhatsAppAdapter(ABC):
     def parse_webhook(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Parse webhook data para formato padronizado"""
         pass
-
-
-class EvolutionAdapter(WhatsAppAdapter):
-    """Adaptador para Evolution API"""
-    
-    def __init__(self, config: EvolutionConfig):
-        self.config = config
-        self.base_url = config.api_url.replace('/manager', '')
-    
-    async def send_message(self, phone: str, message: str) -> Dict[str, Any]:
-        url = f"{self.base_url}/message/sendText/{self.config.instance}"
-        
-        payload = {
-            "number": phone.replace("@s.whatsapp.net", ""),
-            "text": message
-        }
-        
-        headers = {
-            "Content-Type": "application/json",
-            "apikey": self.config.api_key
-        }
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.post(url, json=payload, headers=headers, timeout=30.0)
-            return response.json()
-    
-    async def send_list(self, phone: str, list_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Envia lista interativa via Evolution API"""
-        url = f"{self.base_url}/message/sendList/{self.config.instance}"
-        
-        payload = {
-            "number": phone.replace("@s.whatsapp.net", ""),
-            "options": {
-                "delay": 1200,
-                "presence": "composing"
-            },
-            "listMessage": {
-                "title": list_data.get("title", "Opções"),
-                "description": list_data["body"],
-                "buttonText": list_data["button"],
-                "footerText": list_data.get("footer", ""),
-                "sections": list_data["sections"]
-            }
-        }
-        
-        headers = {
-            "Content-Type": "application/json",
-            "apikey": self.config.api_key
-        }
-        
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.post(url, json=payload, headers=headers, timeout=30.0)
-                if response.status_code in [200, 201]:
-                    return {"status": "success", "response": response.json()}
-                else:
-                    return {"status": "error", "error": response.text}
-            except Exception as e:
-                return {"status": "error", "error": str(e)}
-    
-    async def send_presence(self, phone: str, presence: str) -> Dict[str, Any]:
-        url = f"{self.base_url}/chat/sendPresence/{self.config.instance}"
-        
-        payload = {
-            "number": phone.replace("@s.whatsapp.net", ""),
-            "delay": 1200,
-            "presence": presence  # composing, paused, available
-        }
-        
-        headers = {
-            "Content-Type": "application/json",
-            "apikey": self.config.api_key
-        }
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.post(url, json=payload, headers=headers, timeout=10.0)
-            return response.json()
-    
-    async def mark_as_read(self, phone: str, message_id: str) -> Dict[str, Any]:
-        url = f"{self.base_url}/chat/markMessageAsRead/{self.config.instance}"
-        
-        payload = {
-            "readMessages": [
-                {
-                    "remoteJid": phone,
-                    "fromMe": False,
-                    "id": message_id
-                }
-            ]
-        }
-        
-        headers = {
-            "Content-Type": "application/json",
-            "apikey": self.config.api_key
-        }
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.post(url, json=payload, headers=headers, timeout=10.0)
-            return response.json()
-    
-    def parse_webhook(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Parse Evolution API webhook"""
-        event = data.get("event")
-        
-        if event == "messages.upsert":
-            message_data = data.get("data", {})
-            key = message_data.get("key", {})
-            message = message_data.get("message", {})
-            
-            # Extrair texto baseado no tipo de mensagem
-            text = ""
-            interactive_data = None
-            
-            # Mensagem de texto normal
-            if "conversation" in message:
-                text = message["conversation"]
-            elif "extendedTextMessage" in message:
-                text = message["extendedTextMessage"].get("text", "")
-            
-            # Mensagens interativas (botões e listas)
-            elif "listResponseMessage" in message:
-                # Resposta de lista interativa
-                list_response = message["listResponseMessage"]
-                # Pegar o título da opção selecionada
-                text = list_response.get("title", "")
-                # Se não tiver título, pegar singleSelectReply
-                if not text and "singleSelectReply" in list_response:
-                    text = list_response["singleSelectReply"].get("selectedRowId", "")
-                interactive_data = list_response
-                print(f"🔘 Lista clicada: {text}")
-                
-            elif "buttonsResponseMessage" in message:
-                # Resposta de botão
-                button_response = message["buttonsResponseMessage"]
-                # Pegar o ID ou displayText do botão clicado
-                text = button_response.get("selectedDisplayText", "") or button_response.get("selectedButtonId", "")
-                interactive_data = button_response
-                print(f"🔘 Botão clicado: {text}")
-            
-            return {
-                "type": "message",
-                "phone": key.get("remoteJid", ""),
-                "message_id": key.get("id", ""),
-                "text": text,
-                "from_me": key.get("fromMe", False),
-                "push_name": message_data.get("pushName", ""),
-                "timestamp": message_data.get("messageTimestamp"),
-                "remote_jid_alt": key.get("remoteJidAlt", ""),
-                "interactive_data": interactive_data
-            }
-        
-        elif event == "presence.update":
-            presence_data = data.get("data", {})
-            lid_id = presence_data.get("id", "")
-            presences = presence_data.get("presences", {})
-            user_presence = presences.get(lid_id, {})
-            
-            return {
-                "type": "presence",
-                "lid": lid_id,
-                "presence": user_presence.get("lastKnownPresence", "")
-            }
-        
-        return None
 
 
 class WhatsAppBusinessAdapter(WhatsAppAdapter):
@@ -373,11 +209,26 @@ class WhatsAppBusinessAdapter(WhatsAppAdapter):
         """Parse WhatsApp Business API webhook"""
         # Webhook format: https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components
         
-        print(f"🔍 WhatsApp Business parse_webhook - data completo: {data}")
+        print(f"🔍 WhatsApp Business parse_webhook - data: {data}")
         
-        entry = data.get("entry", [{}])[0]
-        changes = entry.get("changes", [{}])[0]
-        value = changes.get("value", {})
+        # Verificar se é um evento válido do WhatsApp Business
+        if data.get("object") != "whatsapp_business_account":
+            print(f"❌ Object não é whatsapp_business_account: {data.get('object')}")
+            return None
+        
+        entries = data.get("entry", [])
+        if not entries:
+            print("❌ Sem entries no webhook")
+            return None
+            
+        entry = entries[0]
+        changes = entry.get("changes", [])
+        if not changes:
+            print("❌ Sem changes no webhook")
+            return None
+            
+        change = changes[0]
+        value = change.get("value", {})
         
         print(f"🔍 value: {value}")
         
@@ -436,11 +287,7 @@ class WhatsAppBusinessAdapter(WhatsAppAdapter):
         return None
 
 
-def get_whatsapp_adapter(config) -> WhatsAppAdapter:
-    """Factory para criar adaptador baseado na config"""
-    if config.provider == WhatsAppProvider.EVOLUTION:
-        return EvolutionAdapter(config)
-    elif config.provider == WhatsAppProvider.WHATSAPP_BUSINESS:
-        return WhatsAppBusinessAdapter(config)
-    else:
-        raise ValueError(f"Provider não suportado: {config.provider}")
+def get_whatsapp_adapter(config: WhatsAppBusinessConfig) -> WhatsAppBusinessAdapter:
+    """Factory para criar adaptador"""
+    return WhatsAppBusinessAdapter(config)
+
