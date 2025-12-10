@@ -76,7 +76,8 @@ jobs:
 
       - name: Redeploy on Portainer
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        continue-on-error: true
         run: |
-          curl -X POST \
+          curl -X POST --connect-timeout 30 --max-time 60 \
             -H "X-API-Key: ${{ secrets.PORTAINER_API_KEY }}" \
-            "${{ secrets.PORTAINER_URL }}/api/stacks/${{ secrets.PORTAINER_STACK_ID }}/git/redeploy?pullImage=true"
+            "${{ secrets.PORTAINER_URL }}/api/stacks/${{ secrets.PORTAINER_STACK_ID }}/git/redeploy?pullImage=true" || echo "Portainer redeploy failed, please redeploy manually"
