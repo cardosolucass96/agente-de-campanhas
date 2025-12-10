@@ -236,6 +236,16 @@ async def process_stacked_messages(phone: str):
                     
                     if result.get("status") == "success":
                         print(f"✅ Lista enviada com sucesso")
+                        # Salvar mensagem no banco para manter contexto
+                        list_text = response if response else pending_list["list_data"].get("body", "Lista de opções")
+                        new_message = Message(
+                            conversation_id=conversation_id,
+                            text=list_text,
+                            direction="outgoing",
+                            status="sent"
+                        )
+                        db.add(new_message)
+                        db.commit()
                     else:
                         # Fallback: enviar como texto formatado
                         print(f"⚠️ Falha ao enviar lista, enviando como texto: {result.get('error')}")
@@ -250,6 +260,15 @@ async def process_stacked_messages(phone: str):
                     
                     if result.get("status") == "success":
                         print(f"✅ Botões enviados com sucesso")
+                        # Salvar mensagem no banco para manter contexto
+                        new_message = Message(
+                            conversation_id=conversation_id,
+                            text=response,
+                            direction="outgoing",
+                            status="sent"
+                        )
+                        db.add(new_message)
+                        db.commit()
                     else:
                         # Fallback: enviar como texto normal
                         print(f"⚠️ Falha ao enviar botões, enviando como texto: {result.get('error')}")
